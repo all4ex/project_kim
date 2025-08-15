@@ -1,27 +1,46 @@
-from src.rag_pipeline import RAGPipeline
+import asyncio
+import os
+from dotenv import load_dotenv
+from src.bot import create_bot
+from telegram import BotCommand
 
-def main():
-    print("RAG Чат-бот")
-    print("=" * 50)
+load_dotenv()
+
+async def main():
+    """Запуск бота"""
+    print("🚀 Запускаю Telegram RAG-бота...")
     
-    rag = RAGPipeline()
-    
-    # подготавливаем документы (делается один раз)
-    print("Подготовка документов...")
-    if not rag.prepare_documents():
-        print("Не удалось подготовить документы")
+    # проверяем переменные окружения
+    if not os.getenv("BOT_TOKEN"):
+        print("❌ BOT_TOKEN не найден в .env файле")
+        return
+        
+    if not os.getenv("OPENAI_API_KEY"):
+        print("❌ OPENAI_API_KEY не найден в .env файле")
         return
     
-    print("\nГотов к работе! Задавайте вопросы (или 'exit' для выхода)")
+    # создаем папки если их нет
+    os.makedirs("data/documents", exist_ok=True)
+    os.makedirs("data/vectors", exist_ok=True)
     
-    while True:
-        question = input("\n> ").strip()
-        
-        if question.lower() in ['exit', 'quit', 'выход']:
-            break
-            
-        if question:
-            result = rag.ask(question)
+    # создаем и запускаем бота
+    app = create_bot()
+    
+    # устанавливаем меню команд
+    commands = [
+        BotCommand("start", "Начать работу с ботом"),
+        BotCommand("reload", "Перезагрузить документы"),
+        BotCommand("stats", "Показать статистику"),
+        BotCommand("clear", "Очистить историю чата")
+    ]
+    
+    await app.bot.set_my_commands(commands)
+    
+    print("✅ Бот запущен и готов к работе!")
+    print("📁 Добавь документы в папку data/documents/ и используй команду /reload")
+    
+    # запускаем polling
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
